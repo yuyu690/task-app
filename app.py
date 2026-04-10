@@ -159,6 +159,7 @@ def delete_task():
 
     return redirect(url_for('home'))
 
+init_db()
+
 if __name__ == "__main__":
-    init_db()
     app.run()
