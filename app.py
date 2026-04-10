@@ -112,6 +112,8 @@ def login():
         ).fetchone()
         conn.close()
 
+        print("user:", user)
+
         if user and check_password_hash(user['password'], password):
             login_user(User(user['id']))
             return redirect(url_for('home'))
