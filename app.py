@@ -69,6 +69,24 @@ def register():
         username = request.form.get('username')
         password = generate_password_hash(request.form.get('password'))
 
+        try:
+            conn = get_db()
+            conn.execute(
+                'INSERT INTO users (username, password) VALUES (?, ?)',
+                (username, password)
+            )
+            conn.commit()
+            conn.close()
+            return redirect(url_for('login'))
+
+        except Exception as e:
+            return f"エラー: {e}"
+
+    return render_template('register.html')
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = generate_password_hash(request.form.get('password'))
+
         conn = get_db()
         conn.execute(
             'INSERT INTO users (username, password) VALUES (?, ?)',
