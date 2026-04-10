@@ -18,7 +18,7 @@
     {% for task in tasks %}
         <li>{{ task.task }} - 締め切り: {{ task.deadline }} - 授業: {{ task.subject }}</li>
             <form method="POST" action="/delete" style="display:inline;">
-                <input type="hidden" name="id" value="{{ task['id'] }}">
+                <input type="hidden" name="index" value="{{ loop.index0 }}">
                 <button type="submit">消去</button>
             </form>
         </li>
