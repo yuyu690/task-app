@@ -4,7 +4,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3
 
 app = Flask(__name__)
-app.secret_key = 'secret-key'  # 後で変える
+app.secret_key = 'secret-key'  # 後で環境変数等に変えるとさらにGOOD
 
 DB_NAME = 'tasks.db'
 
@@ -28,7 +28,7 @@ class User(UserMixin):
 def load_user(user_id):
     return User(user_id)
 
-# 初期化
+# 初期化（テーブル作成）
 def init_db():
     conn = get_db()
     conn.execute('''
@@ -50,6 +50,10 @@ def init_db():
     conn.commit()
     conn.close()
 
+# アプリ起動時に確実にDBを初期化する
+with app.app_context():
+    init_db()
+
 # ホーム（ログイン必須）
 @app.route('/')
 @login_required
@@ -62,39 +66,29 @@ def home():
     conn.close()
     return render_template('index.html', tasks=tasks)
 
-# 登録
+# ユーザー登録
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
         username = request.form.get('username')
-        password = generate_password_hash(request.form.get('password'))
+        password = request.form.get('password')
+
+        if not username or not password:
+            return "ユーザー名とパスワードを入力してください"
+
+        hashed_password = generate_password_hash(password)
 
         try:
             conn = get_db()
             conn.execute(
                 'INSERT INTO users (username, password) VALUES (?, ?)',
-                (username, password)
+                (username, hashed_password)
             )
             conn.commit()
             conn.close()
             return redirect(url_for('login'))
-
         except Exception as e:
-            return f"エラー: {e}"
-
-    return render_template('register.html')
-    if request.method == 'POST':
-        username = request.form.get('username')
-        password = generate_password_hash(request.form.get('password'))
-
-        conn = get_db()
-        conn.execute(
-            'INSERT INTO users (username, password) VALUES (?, ?)',
-            (username, password)
-        )
-        conn.commit()
-        conn.close()
-        return redirect(url_for('login'))
+            return f"登録エラー（すでに存在するユーザー名の可能性があります）: {e}"
 
     return render_template('register.html')
 
@@ -112,11 +106,11 @@ def login():
         ).fetchone()
         conn.close()
 
-        print("user:", user)
-
         if user and check_password_hash(user['password'], password):
             login_user(User(user['id']))
             return redirect(url_for('home'))
+        else:
+            return "ユーザー名またはパスワードが違います"
 
     return render_template('login.html')
 
@@ -135,33 +129,33 @@ def add_task():
     deadline = request.form.get('deadline')
     subject = request.form.get('subject')
 
-    conn = get_db()
-    conn.execute(
-        'INSERT INTO tasks (user_id, task, deadline, subject) VALUES (?, ?, ?, ?)',
-        (current_user.id, task, deadline, subject)
-    )
-    conn.commit()
-    conn.close()
+    if task:  # タスク名が入っている場合のみ保存
+        conn = get_db()
+        conn.execute(
+            'INSERT INTO tasks (user_id, task, deadline, subject) VALUES (?, ?, ?, ?)',
+            (current_user.id, task, deadline, subject)
+        )
+        conn.commit()
+        conn.close()
 
     return redirect(url_for('home'))
 
-# 削除
+# タスク削除
 @app.route('/delete', methods=['POST'])
 @login_required
 def delete_task():
     task_id = request.form.get('id')
 
-    conn = get_db()
-    conn.execute(
-        'DELETE FROM tasks WHERE id = ? AND user_id = ?',
-        (task_id, current_user.id)
-    )
-    conn.commit()
-    conn.close()
+    if task_id:
+        conn = get_db()
+        conn.execute(
+            'DELETE FROM tasks WHERE id = ? AND user_id = ?',
+            (task_id, current_user.id)
+        )
+        conn.commit()
+        conn.close()
 
     return redirect(url_for('home'))
-
-init_db()
 
 if __name__ == "__main__":
     app.run()
