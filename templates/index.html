@@ -4,37 +4,201 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>タスク管理アプリ</title>
+    <style>
+        /* 全体の基本デザイン */
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f4f6f8;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* ヘッダーエリア */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .logout-btn {
+            color: #e74c3c;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        /* カード風の枠組み */
+        .card {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        /* フォームの配置（横並び） */
+        .task-form {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .task-form input[type="text"],
+        .task-form input[type="date"] {
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            flex: 1;
+            min-width: 150px;
+        }
+        .btn-add {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .btn-add:hover {
+            background-color: #2980b9;
+        }
+
+        /* タスク一覧 */
+        ul.task-list {
+            list-style: none;
+            padding: 0;
+        }
+        ul.task-list li {
+            background: #fdfdfd;
+            border-left: 4px solid #3498db;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .btn-delete {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        /* 折りたたみメモエリア */
+        .memo-toggle-btn {
+            width: 100%;
+            background-color: #e2e8f0;
+            border: none;
+            padding: 10px;
+            text-align: left;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+        }
+        .memo-content {
+            display: none; /* 初期状態は閉じる */
+            padding: 15px;
+            background-color: #fafafa;
+            border: 1px solid #e2e8f0;
+            border-top: none;
+            border-radius: 0 0 4px 4px;
+        }
+        .memo-content.active {
+            display: block; /* 開いた時の表示 */
+        }
+        textarea.memo-area {
+            width: 100%;
+            height: 100px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+    </style>
 </head>
 <body>
-    <h1>タスク管理アプリ</h1>
 
-    <!-- ログアウトボタン（ついでに追加しておくと便利です） -->
-    <p><a href="/logout">ログアウト</a></p>
+    <!-- ヘッダー -->
+    <div class="header">
+        <h1>タスク管理アプリ</h1>
+        <a href="/logout" class="logout-btn">ログアウト</a>
+    </div>
 
-    <!-- タスク追加フォーム -->
-    <form method="POST" action="/add">
-        <input type="text" name="task" placeholder="新しいタスクを入力" required>
-        <input type="date" name="deadline" required>
-        <input type="text" name="subject" placeholder="授業名を入力" required>
-        <button type="submit">追加</button>
-    </form>
+    <!-- タスク追加入力エリア -->
+    <div class="card">
+        <h3>新しいタスクを追加</h3>
+        <form method="POST" action="/add" class="task-form">
+            <input type="text" name="task" placeholder="タスク入力" required>
+            <input type="date" name="deadline" required>
+            <input type="text" name="subject" placeholder="授業名・分類" required>
+            <button type="submit" class="btn-add">追加</button>
+        </form>
+    </div>
 
-    <h2>タスク一覧</h2>
-    <ul>
-        {% for task in tasks %}
-            <li>
-                {{ task.task }} - 締め切り: {{ task.deadline }} - 授業: {{ task.subject }}
-                <!-- タスク消去フォーム -->
-                <form method="POST" action="/delete" style="display:inline;">
-                    <!-- id という名前で、DBのtask.idを送る -->
-                    <input type="hidden" name="id" value="{{ task.id }}">
-                    <button type="submit">消去</button>
-                </form>
-            </li>
-        {% else %}
-            <li>タスクはまだありません</li>
-        {% endfor %}
-    </ul>
+    <!-- タスク一覧エリア -->
+    <div class="card">
+        <h2>タスク一覧</h2>
+        <ul class="task-list">
+            {% for task in tasks %}
+                <li>
+                    <div>
+                        <strong>{{ task.task }}</strong> 
+                        <span style="color: #666; font-size: 0.9em; margin-left: 10px;">
+                            (締切: {{ task.deadline }} / 授業: {{ task.subject }})
+                        </span>
+                    </div>
+                    <form method="POST" action="/delete" style="display:inline;">
+                        <input type="hidden" name="id" value="{{ task.id }}">
+                        <button type="submit" class="btn-delete">消去</button>
+                    </form>
+                </li>
+            {% else %}
+                <li style="border-left-color: #ccc;">タスクはまだありません</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <!-- 折りたたみメモ一覧エリア -->
+    <div class="card">
+        <button class="memo-toggle-btn" onclick="toggleMemo()">
+            📝 メモ一覧 <span id="arrow">▼</span>
+        </button>
+        <div class="memo-content" id="memoBox">
+            <textarea class="memo-area" placeholder="自由メモ（アイデアや備忘録など）..."></textarea>
+        </div>
+    </div>
+
+    <!-- JavaScript：メモ開閉の動き -->
+    <script>
+        function toggleMemo() {
+            const memoBox = document.getElementById('memoBox');
+            const arrow = document.getElementById('arrow');
+            
+            // クラスのつけ外しで開閉を切り替える
+            memoBox.classList.toggle('active');
+            
+            // 矢印の向きを変更
+            if (memoBox.classList.contains('active')) {
+                arrow.textContent = '▲';
+            } else {
+                arrow.textContent = '▼';
+            }
+        }
+    </script>
+
 </body>
 </html>
-
